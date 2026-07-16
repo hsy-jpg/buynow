@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:\\Users\\jubil\\Documents\\물가관리시스템\\.claude\\hooks\\check-main-push.js\"",
+            "if": "Bash(git push *)",
+            "timeout": 10,
+            "statusMessage": "CONTRIBUTING.md: main 직접 push 금지 규칙 확인 중..."
+          },
+          {
+            "type": "command",
+            "command": "node \"C:\\Users\\jubil\\Documents\\물가관리시스템\\.claude\\hooks\\check-team-conflict.js\"",
+            "if": "Bash(git commit *)",
+            "timeout": 15,
+            "statusMessage": "다른 팀원 브랜치와 파일이 겹치는지 확인 중..."
+          }
+        ]
+      }
+    ]
+  }
+}
