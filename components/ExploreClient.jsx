@@ -2,16 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { LineChart } from "./LineChart";
+import { MonthlyBarChart } from "./MonthlyBarChart";
 import { useZzim } from "./ZzimProvider";
 
 const SIGNAL_EMOJI = { good: "😊", normal: "😐", bad: "😥", unknown: "🤔" };
 const SIGNAL_DOT = { good: "🟢", normal: "🟡", bad: "🔴", unknown: "⚪" };
 
-export function ExploreClient({ categories, products, signals }) {
+export function ExploreClient({ categories, products, signals, deviations, initialCategory, initialProductId }) {
   const { zzim, alarm, toggleZzim, toggleAlarm, ready } = useZzim();
-  const [selectedCategory, setSelectedCategory] = useState(categories[0].key);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory ?? categories[0].key);
   const [selectedProductId, setSelectedProductId] = useState(
-    products.find((p) => p.uiCategory === categories[0].key)?.id ?? null
+    initialProductId ?? (products.find((p) => p.uiCategory === (initialCategory ?? categories[0].key))?.id ?? null)
   );
   const [search, setSearch] = useState("");
 
@@ -47,6 +48,22 @@ export function ExploreClient({ categories, products, signals }) {
   const isZzim = selectedProduct ? zzim.includes(selectedProduct.id) : false;
   const isAlarm = selectedProduct ? alarm.includes(selectedProduct.id) : false;
   const isNonStandardBase = selectedProduct && selectedProduct.basePeriod !== "2020=100";
+
+  const productDeviation = selectedProduct ? deviations[selectedProduct.id] : null;
+  const monthPattern = useMemo(() => {
+    if (!selectedProduct || !productDeviation) return null;
+    const validSeries = selectedProduct.series.filter((d) => d.index != null);
+    const currentMonth = validSeries.length > 0 ? validSeries[validSeries.length - 1].month : null;
+    let worstMonth = null, worstDev = null, bestMonth = null, bestDev = null;
+    productDeviation.forEach((d, idx) => {
+      if (d == null) return;
+      const month = idx + 1;
+      if (worstDev == null || d > worstDev) { worstDev = d; worstMonth = month; }
+      if (bestDev == null || d < bestDev) { bestDev = d; bestMonth = month; }
+    });
+    if (worstMonth == null) return null;
+    return { currentMonth, worstMonth, worstDev, bestMonth, bestDev };
+  }, [selectedProduct, productDeviation]);
 
   return (
     <>
@@ -113,6 +130,21 @@ export function ExploreClient({ categories, products, signals }) {
           </div>
         )}
       </div>
+
+      {selectedProduct && monthPattern && (
+        <div className="season-pattern-card">
+          <div className="season-pattern-title">📅 월별 가격 패턴 (연평균 대비 레벨 편차)</div>
+          <MonthlyBarChart deviations={productDeviation} currentMonth={monthPattern.currentMonth} />
+          <div className="season-pattern-summary">
+            <span className="tag-bad">
+              🔴 가장 비싼 달 {monthPattern.worstMonth}월 ({monthPattern.worstDev >= 0 ? "+" : ""}{monthPattern.worstDev}%)
+            </span>
+            <span className="tag-good">
+              🟢 가장 싼 달 {monthPattern.bestMonth}월 ({monthPattern.bestDev >= 0 ? "+" : ""}{monthPattern.bestDev}%)
+            </span>
+          </div>
+        </div>
+      )}
 
       {sig && (
         <div className={`signal-card ${sig.level}`}>

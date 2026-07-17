@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   getAllProductSummaries,
-  momChangeFor,
   signalFor,
   getAllSimulatorStats,
 } from "@/lib/ppi";
@@ -11,8 +10,8 @@ import { SimulatorClient } from "@/components/SimulatorClient";
 
 export default function MypagePage() {
   const products = getAllProductSummaries();
-  const momById = Object.fromEntries(products.map((p) => [p.id, momChangeFor(p.id)]));
   const signals = Object.fromEntries(products.map((p) => [p.id, signalFor(p.id)]));
+  const deviationById = Object.fromEntries(products.map((p) => [p.id, signals[p.id]?.diffPct ?? null]));
   const simStats = getAllSimulatorStats();
 
   return (
@@ -35,7 +34,7 @@ export default function MypagePage() {
       </div>
 
       <div className="section-title" id="zzim-section">❤️ 찜한 품목</div>
-      <MypageZzimList products={products} momById={momById} signals={signals} />
+      <MypageZzimList products={products} deviationById={deviationById} signals={signals} />
 
       <div className="section-title" id="simulator-section">🛒 장바구니 시뮬레이터</div>
       <SimulatorClient products={products} simStats={simStats} />

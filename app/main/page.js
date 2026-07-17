@@ -1,7 +1,7 @@
-import { UI_CATEGORIES, getAllProducts, signalFor } from "@/lib/ppi";
+import { UI_CATEGORIES, getAllProducts, getProduct, signalFor, getMonthlyLevelDeviation } from "@/lib/ppi";
 import { ExploreClient } from "@/components/ExploreClient";
 
-export default function MainPage() {
+export default function MainPage({ searchParams }) {
   const categories = UI_CATEGORIES.map((c) => ({
     key: c.key,
     label: c.label,
@@ -19,6 +19,20 @@ export default function MainPage() {
   }));
 
   const signals = Object.fromEntries(products.map((p) => [p.id, signalFor(p.id)]));
+  const deviations = Object.fromEntries(products.map((p) => [p.id, getMonthlyLevelDeviation(p.id)]));
 
-  return <ExploreClient categories={categories} products={products} signals={signals} />;
+  const requested = searchParams?.product ? getProduct(searchParams.product) : null;
+  const initialCategory = requested ? requested.uiCategory : categories[0].key;
+  const initialProductId = requested ? requested.id : null;
+
+  return (
+    <ExploreClient
+      categories={categories}
+      products={products}
+      signals={signals}
+      deviations={deviations}
+      initialCategory={initialCategory}
+      initialProductId={initialProductId}
+    />
+  );
 }
