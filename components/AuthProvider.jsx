@@ -1,64 +1,81 @@
 "use client";
 
-// 모의 인증: 실제 서버/DB 없이 localStorage에 계정을 저장한다.
-// 나중에 Supabase Auth로 교체할 때 signUp/signIn/signOut/user 시그니처만 유지하면 됨.
+// Supabase Auth 기반 인증. signUp/signIn/signOut/user 시그니처는 이전 localStorage mock과 동일하게 유지.
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useState([]);
-  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      setUsers(JSON.parse(localStorage.getItem("auth_users") || "[]"));
-      setSession(JSON.parse(localStorage.getItem("auth_session") || "null"));
-    } catch {
-      // ignore malformed storage
+    let active = true;
+
+    async function loadProfile(session) {
+      if (!session?.user) {
+        if (active) setUser(null);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("buynow_profiles")
+        .select("nickname")
+        .eq("id", session.user.id)
+        .single();
+      if (!active) return;
+      setUser({
+        id: session.user.id,
+        email: session.user.email,
+        nickname: profile?.nickname || session.user.email.split("@")[0],
+      });
     }
-    setReady(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadProfile(session).then(() => {
+        if (active) setReady(true);
+      });
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadProfile(session);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
-  useEffect(() => {
-    if (ready) localStorage.setItem("auth_users", JSON.stringify(users));
-  }, [users, ready]);
-
-  useEffect(() => {
-    if (ready) localStorage.setItem("auth_session", JSON.stringify(session));
-  }, [session, ready]);
 
   const value = useMemo(
     () => ({
-      user: session,
+      user,
       ready,
-      signUp: ({ email, password, nickname }) => {
+      signUp: async ({ email, password, nickname }) => {
         const emailNorm = email.trim().toLowerCase();
         if (!emailNorm || !password) return { error: "이메일과 비밀번호를 입력해주세요" };
-        if (users.some((u) => u.email === emailNorm)) {
-          return { error: "이미 가입된 이메일이에요" };
-        }
-        const newUser = {
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        const { data, error } = await supabase.auth.signUp({
           email: emailNorm,
           password,
-          nickname: nickname.trim() || emailNorm.split("@")[0],
-        };
-        setUsers((prev) => [...prev, newUser]);
-        setSession({ id: newUser.id, email: newUser.email, nickname: newUser.nickname });
+          options: { data: { nickname: nickname?.trim() || emailNorm.split("@")[0] } },
+        });
+        if (error) return { error: error.message };
+        if (!data.session) {
+          return { error: null, needsEmailConfirm: true };
+        }
         return { error: null };
       },
-      signIn: ({ email, password }) => {
+      signIn: async ({ email, password }) => {
         const emailNorm = email.trim().toLowerCase();
-        const found = users.find((u) => u.email === emailNorm && u.password === password);
-        if (!found) return { error: "이메일 또는 비밀번호가 올바르지 않아요" };
-        setSession({ id: found.id, email: found.email, nickname: found.nickname });
+        const { error } = await supabase.auth.signInWithPassword({ email: emailNorm, password });
+        if (error) return { error: "이메일 또는 비밀번호가 올바르지 않아요" };
         return { error: null };
       },
-      signOut: () => setSession(null),
+      signOut: () => supabase.auth.signOut(),
     }),
-    [users, ready]
+    [user, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,11 +4,23 @@ import { ZzimProvider } from "@/components/ZzimProvider";
 import { NotificationProvider } from "@/components/NotificationProvider";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
+import { PWARegister } from "@/components/PWARegister";
 import { getAllProductSummaries, momChangeFor, getLatestMonthLabel } from "@/lib/ppi";
 
 export const metadata = {
   title: "오늘사요?",
   description: "생산자물가지수 기반 식료품 구매 타이밍 도우미",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "오늘사요?",
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#7ED321",
 };
 
 export default function RootLayout({ children }) {
@@ -24,6 +36,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ko">
       <body>
+        <PWARegister />
         <AuthProvider>
           <ZzimProvider>
             <NotificationProvider feed={alarmFeed} latestMonth={latestMonth}>

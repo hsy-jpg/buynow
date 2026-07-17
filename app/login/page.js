@@ -12,9 +12,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
-    const { error } = signIn({ email, password });
+    const { error } = await signIn({ email, password });
     if (error) {
       setError(error);
       return;

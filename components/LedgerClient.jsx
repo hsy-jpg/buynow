@@ -1,10 +1,31 @@
 "use client";
 
-// 소비 기록(가계부): 사용자가 직접 입력한 실제 구매 내역. PPI 지수 데이터와 무관한 자체 로컬 기록.
+// 소비 기록(가계부): 사용자가 직접 입력한 실제 구매 내역. PPI 지수 데이터와 무관한 자체 기록.
+// 로그인한 사용자는 Supabase buynow_ledger 테이블에, 로그인하지 않은 사용자는 이 브라우저의
+// localStorage에 저장한다(기기 간 동기화는 되지 않음).
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/components/AuthProvider";
 import { LEDGER_CATEGORIES, categoryMeta } from "@/lib/ledgerCategories";
 import { DonutChart } from "@/components/DonutChart";
 import { BarChart } from "@/components/BarChart";
+
+const GUEST_LEDGER_KEY = "oneulsaya_ledger_guest";
+
+function loadGuestEntries() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(GUEST_LEDGER_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGuestEntries(entries) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(GUEST_LEDGER_KEY, JSON.stringify(entries));
+}
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -20,7 +41,20 @@ function monthKeysBack(n) {
   return keys;
 }
 
+function toClient(row) {
+  return {
+    id: row.id,
+    itemName: row.item_name,
+    amount: Number(row.amount),
+    quantity: Number(row.quantity),
+    date: row.entry_date,
+    category: row.category,
+    memo: row.memo || "",
+  };
+}
+
 export function LedgerClient() {
+  const { user, ready: authReady } = useAuth();
   const [entries, setEntries] = useState([]);
   const [ready, setReady] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -32,18 +66,35 @@ export function LedgerClient() {
   const [memo, setMemo] = useState("");
 
   useEffect(() => {
-    try {
-      setEntries(JSON.parse(localStorage.getItem("ledger") || "[]"));
-    } catch {
-      // ignore malformed storage
-    }
     setDate(todayStr());
-    setReady(true);
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem("ledger", JSON.stringify(entries));
-  }, [entries, ready]);
+    if (!authReady) return;
+    let active = true;
+
+    if (!user) {
+      setEntries(loadGuestEntries());
+      setReady(true);
+      return;
+    }
+
+    setReady(false);
+    supabase
+      .from("buynow_ledger")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!active) return;
+        setEntries((data || []).map(toClient));
+        setReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, authReady]);
 
   function resetForm() {
     setEditingId(null);
@@ -55,37 +106,70 @@ export function LedgerClient() {
     setMemo("");
   }
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
     if (!itemName.trim() || !amount) return;
 
+    if (!user) {
+      if (editingId) {
+        const patch = {
+          itemName: itemName.trim(),
+          amount: Number(amount),
+          quantity: Number(quantity) || 1,
+          date,
+          category,
+          memo: memo.trim(),
+        };
+        setEntries((prev) => {
+          const next = prev.map((entry) => (entry.id === editingId ? { ...entry, ...patch } : entry));
+          saveGuestEntries(next);
+          return next;
+        });
+      } else {
+        const entry = {
+          id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          itemName: itemName.trim(),
+          amount: Number(amount),
+          quantity: Number(quantity) || 1,
+          date,
+          category,
+          memo: memo.trim(),
+        };
+        setEntries((prev) => {
+          const next = [entry, ...prev];
+          saveGuestEntries(next);
+          return next;
+        });
+      }
+      resetForm();
+      return;
+    }
+
     if (editingId) {
-      setEntries((prev) =>
-        prev.map((entry) =>
-          entry.id === editingId
-            ? {
-                ...entry,
-                itemName: itemName.trim(),
-                amount: Number(amount),
-                quantity: Number(quantity) || 1,
-                date,
-                category,
-                memo: memo.trim(),
-              }
-            : entry
-        )
-      );
-    } else {
-      const entry = {
-        id: `${date}__${Math.random().toString(36).slice(2, 8)}`,
-        itemName: itemName.trim(),
+      const patch = {
+        item_name: itemName.trim(),
         amount: Number(amount),
         quantity: Number(quantity) || 1,
-        date,
+        entry_date: date,
         category,
         memo: memo.trim(),
       };
-      setEntries((prev) => [entry, ...prev]);
+      setEntries((prev) =>
+        prev.map((entry) => (entry.id === editingId ? { ...entry, ...toClient({ id: editingId, ...patch }) } : entry))
+      );
+      await supabase.from("buynow_ledger").update(patch).eq("id", editingId).eq("user_id", user.id);
+    } else {
+      const row = {
+        user_id: user.id,
+        item_name: itemName.trim(),
+        amount: Number(amount),
+        quantity: Number(quantity) || 1,
+        entry_date: date,
+        category,
+        memo: memo.trim(),
+      };
+      const { data } = await supabase.from("buynow_ledger").insert(row).select().single();
+      if (data) setEntries((prev) => [toClient(data), ...prev]);
     }
     resetForm();
   }
@@ -100,12 +184,21 @@ export function LedgerClient() {
     setMemo(entry.memo || "");
   }
 
-  function removeEntry(id) {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+  async function removeEntry(id) {
     if (editingId === id) resetForm();
+    if (!user) {
+      setEntries((prev) => {
+        const next = prev.filter((e) => e.id !== id);
+        saveGuestEntries(next);
+        return next;
+      });
+      return;
+    }
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+    await supabase.from("buynow_ledger").delete().eq("id", id).eq("user_id", user.id);
   }
 
-  if (!ready) return null;
+  if (!authReady || !ready) return null;
 
   const grandTotal = entries.reduce((sum, e) => sum + e.amount * e.quantity, 0);
   const thisMonth = todayStr().slice(0, 7);
@@ -142,6 +235,12 @@ export function LedgerClient() {
 
   return (
     <>
+      {!user && (
+        <div className="ledger-guest-notice">
+          🔓 로그인 없이도 기록할 수 있어요 (단, 이 브라우저에만 저장돼요)
+        </div>
+      )}
+
       <div className="ledger-summary">
         <span>이번 달 지출</span>
         <span className="val">{monthTotal.toLocaleString()}원</span>

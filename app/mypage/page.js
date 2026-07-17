@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   getAllProductSummaries,
   signalFor,
-  getAllLevelSimulatorStats,
+  getAllSimulatorStats,
 } from "@/lib/ppi";
 import { MypageHeader } from "@/components/MypageHeader";
 import { MypageZzimList } from "@/components/MypageZzimList";
@@ -21,7 +21,7 @@ export default function MypagePage() {
 
       <div className="menu-list">
         <MypageModal emoji="❤️" label="찜한 품목">
-          <MypageZzimList products={products} levelDevById={levelDevById} signals={signals} />
+          <MypageZzimList products={products} deviationById={deviationById} signals={signals} />
         </MypageModal>
         <Link className="menu-item" href="/mypage/notifications">
           <span className="emoji">🔔</span> 알림함 (월 1회 갱신 기준) <span className="arrow">›</span>
@@ -33,12 +33,6 @@ export default function MypagePage() {
           <SimulatorClient products={products} simStats={simStats} />
         </MypageModal>
       </div>
-
-      <div className="section-title" id="zzim-section">❤️ 찜한 품목</div>
-      <MypageZzimList products={products} deviationById={deviationById} signals={signals} />
-
-      <div className="section-title" id="simulator-section">🛒 장바구니 시뮬레이터</div>
-      <SimulatorClient products={products} simStats={simStats} />
     </>
   );
 }
