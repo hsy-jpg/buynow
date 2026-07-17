@@ -2,7 +2,7 @@
 
 import { useZzim } from "./ZzimProvider";
 
-export function MypageZzimList({ products, levelDevById, signals }) {
+export function MypageZzimList({ products, deviationById, signals }) {
   const { zzim, ready } = useZzim();
 
   if (!ready) return null;
@@ -20,7 +20,7 @@ export function MypageZzimList({ products, levelDevById, signals }) {
       {zzim.map((id) => {
         const product = products.find((p) => p.id === id);
         if (!product) return null;
-        const change = levelDevById[id];
+        const change = deviationById[id];
         const sig = signals[id];
         const sign = change != null && change >= 0 ? "+" : "";
         const color = change != null && change >= 0 ? "var(--color-signal-red)" : "var(--color-signal-green)";
