@@ -13,11 +13,15 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
-    const { error } = signUp({ email, password, nickname });
+    const { error, needsEmailConfirm } = await signUp({ email, password, nickname });
     if (error) {
       setError(error);
+      return;
+    }
+    if (needsEmailConfirm) {
+      setError("가입 확인 이메일을 보냈어요. 메일함에서 확인 링크를 눌러주세요.");
       return;
     }
     router.push("/mypage");

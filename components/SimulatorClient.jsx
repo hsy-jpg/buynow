@@ -71,12 +71,8 @@ export function SimulatorClient({ products, simStats }) {
                 {stats ? (
                   <>
                     <div className="sim-row">
-                      <span>이번 달 도매가 지수</span>
-                      <span className="val">지수 {stats.now.toFixed(1)}</span>
-                    </div>
-                    <div className="sim-row">
                       <span>보통 가장 쌌던 달</span>
-                      <span className="val">지수 {stats.low.toFixed(1)} ({stats.lowLabel})</span>
+                      <span className="val">{stats.lowLabel}</span>
                     </div>
                     <div className="sim-row">
                       <span>차이</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DeviationBarChart } from "./LineChart";
 import { useZzim } from "./ZzimProvider";
 
@@ -102,6 +103,7 @@ function FlatHeartIcon() {
 
 export function ExploreClient({ categories, products }) {
   const { zzim, alarm, toggleZzim, toggleAlarm, ready } = useZzim();
+  const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState(categories[0].key);
   const [selectedProductId, setSelectedProductId] = useState(
     products.find((p) => p.uiCategory === categories[0].key)?.id ?? null
@@ -109,6 +111,16 @@ export function ExploreClient({ categories, products }) {
   const [search, setSearch] = useState("");
   const [caveatOpen, setCaveatOpen] = useState(false);
   const caveatRef = useRef(null);
+
+  // 다른 화면(대시보드 등)에서 특정 품목을 눌러 /main?product=ID 로 들어오면 해당 품목 그래프를 바로 보여준다.
+  useEffect(() => {
+    const productId = searchParams.get("product");
+    if (!productId) return;
+    const target = products.find((p) => p.id === productId);
+    if (!target) return;
+    setSelectedCategory(target.uiCategory);
+    setSelectedProductId(target.id);
+  }, [searchParams, products]);
 
   useEffect(() => {
     function onDocClick(e) {

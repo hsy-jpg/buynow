@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useZzim } from "./ZzimProvider";
 
 const LEVEL_DOT = { good: "🟢", normal: "🟡", bad: "🔴", unknown: "⚪" };
@@ -32,7 +33,11 @@ export function ZzimHomeSection({ products, signals }) {
           : sig.level === "bad" ? "var(--color-signal-red)"
           : "var(--color-signal-yellow)";
         return (
-          <div className="zzim-card" key={id}>
+          <Link
+            href={`/main?product=${encodeURIComponent(id)}`}
+            className="zzim-card"
+            key={id}
+          >
             <div className="row">
               <div className="item">
                 <span className="emoji">{product.emoji}</span>
@@ -47,7 +52,7 @@ export function ZzimHomeSection({ products, signals }) {
               <div className="fill" style={{ width: `${gaugePos}%`, background: fillVar }} />
               <div className="marker" style={{ left: `calc(${gaugePos}% - 1px)` }} />
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

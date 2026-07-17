@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { UI_CATEGORIES, getAllProducts } from "@/lib/ppi";
 import { ExploreClient } from "@/components/ExploreClient";
 
@@ -15,5 +16,9 @@ export default function MainPage() {
     series: p.series.map((d) => ({ year: d.year, month: d.month, label: d.label, index: d.index })),
   }));
 
-  return <ExploreClient categories={categories} products={products} />;
+  return (
+    <Suspense fallback={null}>
+      <ExploreClient categories={categories} products={products} />
+    </Suspense>
+  );
 }
