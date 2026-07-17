@@ -69,16 +69,22 @@ export function SimulatorClient({ products, simStats }) {
                   <span className={`badge ${verdict.level}`}>{verdict.label}</span>
                 </div>
                 {stats ? (
-                  <>
-                    <div className="sim-row">
-                      <span>보통 가장 쌌던 달</span>
-                      <span className="val">{stats.lowLabel}</span>
-                    </div>
-                    <div className="sim-row">
-                      <span>차이</span>
-                      <span className="val">{stats.diffPct > 0 ? "+" : ""}{stats.diffPct}%</span>
-                    </div>
-                  </>
+                  <div className="sim-row">
+                    <span
+                      className="val diff-sentence"
+                      style={{
+                        color:
+                          stats.diffPct > 0
+                            ? "var(--color-signal-red)"
+                            : stats.diffPct < 0
+                            ? "var(--color-signal-green)"
+                            : undefined,
+                      }}
+                    >
+                      가장 싼 {stats.lowLabel.match(/\d+/)?.[0]}월 대비 {Math.abs(stats.diffPct)}%{" "}
+                      {stats.diffPct > 0 ? "비싸요" : stats.diffPct < 0 ? "싸요" : "같아요"}
+                    </span>
+                  </div>
                 ) : (
                   <div className="sim-row"><span>비교할 데이터가 부족해요</span></div>
                 )}

@@ -1,8 +1,28 @@
 "use client";
 
+// 찜/알림: 로그인한 사용자는 Supabase buynow_zzim/buynow_alarm 테이블에, 로그인하지 않은
+// 사용자는 이 브라우저의 localStorage에 저장한다(기기 간 동기화는 되지 않음) — LedgerClient와 동일한 패턴.
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./AuthProvider";
+
+const GUEST_ZZIM_KEY = "oneulsaya_zzim_guest";
+const GUEST_ALARM_KEY = "oneulsaya_alarm_guest";
+
+function loadGuestList(key) {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGuestList(key, list) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, JSON.stringify(list));
+}
 
 const ZzimContext = createContext(null);
 
@@ -17,8 +37,8 @@ export function ZzimProvider({ children }) {
     let active = true;
 
     if (!user) {
-      setZzim([]);
-      setAlarm([]);
+      setZzim(loadGuestList(GUEST_ZZIM_KEY));
+      setAlarm(loadGuestList(GUEST_ALARM_KEY));
       setReady(true);
       return;
     }
@@ -45,9 +65,13 @@ export function ZzimProvider({ children }) {
       alarm,
       ready,
       toggleZzim: async (id) => {
-        if (!user) return;
         const has = zzim.includes(id);
-        setZzim((prev) => (has ? prev.filter((x) => x !== id) : [...prev, id]));
+        const next = has ? zzim.filter((x) => x !== id) : [...zzim, id];
+        setZzim(next);
+        if (!user) {
+          saveGuestList(GUEST_ZZIM_KEY, next);
+          return;
+        }
         if (has) {
           await supabase.from("buynow_zzim").delete().eq("user_id", user.id).eq("product_id", id);
         } else {
@@ -55,9 +79,13 @@ export function ZzimProvider({ children }) {
         }
       },
       toggleAlarm: async (id) => {
-        if (!user) return;
         const has = alarm.includes(id);
-        setAlarm((prev) => (has ? prev.filter((x) => x !== id) : [...prev, id]));
+        const next = has ? alarm.filter((x) => x !== id) : [...alarm, id];
+        setAlarm(next);
+        if (!user) {
+          saveGuestList(GUEST_ALARM_KEY, next);
+          return;
+        }
         if (has) {
           await supabase.from("buynow_alarm").delete().eq("user_id", user.id).eq("product_id", id);
         } else {
