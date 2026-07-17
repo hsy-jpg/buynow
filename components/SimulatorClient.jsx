@@ -26,13 +26,13 @@ export function SimulatorClient({ products, simStats }) {
             <span className="val">지수 {stats.now.toFixed(1)}</span>
           </div>
           <div className="sim-row">
-            <span>최근 3년 저점(가장 쌌던 달)</span>
+            <span>보통 가장 쌌던 달</span>
             <span className="val">지수 {stats.low.toFixed(1)} ({stats.lowLabel})</span>
           </div>
           <div className="conclusion">
             {stats.diffPct <= 3
-              ? `지금이 최근 저점과 비슷해요. 지금 사도 좋아요! 🟢`
-              : `과거 최저점 대비 현재 약 ${stats.diffPct}% 비싼 도매가 수준이에요.`}
+              ? `지금이 보통 가장 쌌던 시기와 비슷해요. 지금 사도 좋아요! 🟢`
+              : `보통 가장 쌌던 시기 대비 현재 약 ${stats.diffPct}% 비싼 도매가 수준이에요.`}
           </div>
         </>
       ) : (

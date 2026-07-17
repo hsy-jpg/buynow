@@ -102,9 +102,9 @@ function FlatHeartIcon() {
 
 export function ExploreClient({ categories, products }) {
   const { zzim, alarm, toggleZzim, toggleAlarm, ready } = useZzim();
-  const [selectedCategory, setSelectedCategory] = useState(categories[0].key);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory ?? categories[0].key);
   const [selectedProductId, setSelectedProductId] = useState(
-    products.find((p) => p.uiCategory === categories[0].key)?.id ?? null
+    initialProductId ?? (products.find((p) => p.uiCategory === (initialCategory ?? categories[0].key))?.id ?? null)
   );
   const [search, setSearch] = useState("");
   const [caveatOpen, setCaveatOpen] = useState(false);
@@ -176,6 +176,22 @@ export function ExploreClient({ categories, products }) {
   const periodLabel = selectedProduct
     ? `월별 · ${selectedProduct.series[0]?.label}~${selectedProduct.series[selectedProduct.series.length - 1]?.label}`
     : "";
+
+  const productDeviation = selectedProduct ? deviations[selectedProduct.id] : null;
+  const monthPattern = useMemo(() => {
+    if (!selectedProduct || !productDeviation) return null;
+    const validSeries = selectedProduct.series.filter((d) => d.index != null);
+    const currentMonth = validSeries.length > 0 ? validSeries[validSeries.length - 1].month : null;
+    let worstMonth = null, worstDev = null, bestMonth = null, bestDev = null;
+    productDeviation.forEach((d, idx) => {
+      if (d == null) return;
+      const month = idx + 1;
+      if (worstDev == null || d > worstDev) { worstDev = d; worstMonth = month; }
+      if (bestDev == null || d < bestDev) { bestDev = d; bestMonth = month; }
+    });
+    if (worstMonth == null) return null;
+    return { currentMonth, worstMonth, worstDev, bestMonth, bestDev };
+  }, [selectedProduct, productDeviation]);
 
   return (
     <>
