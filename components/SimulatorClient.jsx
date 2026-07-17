@@ -59,15 +59,49 @@ export function SimulatorClient({ products, simStats }) {
               </span>
             ))}
           </div>
-          <div className="sim-row">
-            <span>보통 가장 쌌던 달</span>
-            <span className="val">지수 {stats.low.toFixed(1)} ({stats.lowLabel})</span>
+
+          <div className="sim-compare-list">
+            {items.map(({ product, stats, verdict }) => (
+              <div className="sim-compare-row" key={product.id}>
+                <div className="sim-compare-head">
+                  <span className="emoji">{product.emoji}</span>
+                  <span className="name">{product.name}</span>
+                  <span className={`badge ${verdict.level}`}>{verdict.label}</span>
+                </div>
+                {stats ? (
+                  <>
+                    <div className="sim-row">
+                      <span>이번 달 도매가 지수</span>
+                      <span className="val">지수 {stats.now.toFixed(1)}</span>
+                    </div>
+                    <div className="sim-row">
+                      <span>보통 가장 쌌던 달</span>
+                      <span className="val">지수 {stats.low.toFixed(1)} ({stats.lowLabel})</span>
+                    </div>
+                    <div className="sim-row">
+                      <span>차이</span>
+                      <span className="val">{stats.diffPct > 0 ? "+" : ""}{stats.diffPct}%</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="sim-row"><span>비교할 데이터가 부족해요</span></div>
+                )}
+              </div>
+            ))}
           </div>
 
           <div className="conclusion">
-            {stats.diffPct <= 3
-              ? `지금이 보통 가장 쌌던 시기와 비슷해요. 지금 사도 좋아요! 🟢`
-              : `보통 가장 쌌던 시기 대비 현재 약 ${stats.diffPct}% 비싼 도매가 수준이에요.`}
+            {postpone.length === 0
+              ? "고른 품목 모두 지금 사도 좋은 시기예요! 🟢"
+              : buyNow.length === 0
+              ? "고른 품목 전부 다음으로 미루는 걸 추천해요."
+              : (
+                <>
+                  ✅ 지금 사도 좋아요: {buyNow.map((i) => i.product.name).join(", ")}
+                  <br />
+                  ⏸ 다음으로 미뤄도 좋아요: {postpone.map((i) => i.product.name).join(", ")}
+                </>
+              )}
           </div>
         </>
       )}

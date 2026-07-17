@@ -102,9 +102,9 @@ function FlatHeartIcon() {
 
 export function ExploreClient({ categories, products }) {
   const { zzim, alarm, toggleZzim, toggleAlarm, ready } = useZzim();
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory ?? categories[0].key);
+  const [selectedCategory, setSelectedCategory] = useState(categories[0].key);
   const [selectedProductId, setSelectedProductId] = useState(
-    initialProductId ?? (products.find((p) => p.uiCategory === (initialCategory ?? categories[0].key))?.id ?? null)
+    products.find((p) => p.uiCategory === categories[0].key)?.id ?? null
   );
   const [search, setSearch] = useState("");
   const [caveatOpen, setCaveatOpen] = useState(false);
