@@ -5,7 +5,7 @@ export function Header() {
   return (
     <header className="app-header">
       <Link href="/" className="brand">
-        <span className="mascot">🌱</span> 오늘사요?
+        <img src="/images/logo-header.png" alt="오늘사요?" className="brand-logo" />
       </Link>
       <div className="header-icons">
         <NotificationBell />
